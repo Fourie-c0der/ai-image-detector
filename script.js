@@ -2,8 +2,7 @@
 const tagsPerPage = 20;
 
 //event listener fo upload
-
- async function upload() {
+document.getElementById('uploadButton').addEventListener('click', async () => {
     const fileInput = document.getElementById('imageInput');
     const file = fileInput.files[0];
     const imagePreview = document.getElementById('imagePreview');
@@ -82,15 +81,15 @@ const tagsPerPage = 20;
         //Display results
         displayColors(colorResult.result.color);
         displayTags(tagsResult.result.tag);
+
     }catch(error){
-        console.Error('Error', error);
+        console.error('Error', error);
         showToast('An error has occured while processing the image!');
     }finally{
        uploadModal.style.display = 'none'; 
     }
-}
+});
 
-document.getElementById('uploadButton').addEventListener('click', upload);
 
 //Function to display color results
 
@@ -146,7 +145,7 @@ const displayColors = colors =>{
 let allTags = [];
 let displayedTags = 0;
 
-function displayTags(tags){
+const displayTags = tags =>{
     const tagsContainer = document.querySelector('.tags-container');
     const resultList = tagsContainer.querySelector('.results');
     const error = tagsContainer.querySelector('.error');
@@ -168,7 +167,59 @@ function displayTags(tags){
 
     //Function to show more tags when "See More" button is clicked
     const showMoreTags = () =>{
-        const tagsToShow = allTags.slice(displayTags, displayTags + tagsPerPage);
+        const tagsToShow = allTags.slice(displayedTags, displayedTags + tagsPerPage);
+        displayedTags += tagsToShow.length;
+        const tagsHTML = tagsToShow.map(({tag: {en} }) => `
+            <div class="result-item">
+                <p>${en}</p>
+            </div>
+        `).join(''); 
+        
+        if(resultList){
+            resultList.innerHTML = tagsHTML;
+        }
+
+        //Toggle visibilty of error and buttons
+        error.style.display = displayedTags > 0 ? 'none' : 'block';
+        error.style.display = displayedTags < allTags.length ? 'block' : 'none';
+        exportTagsButton.style.display = displayedTags > 0 ? 'block' : 'none';
+    };
+
+    showMoreTags(); //init load of tags
+
+    //Event for see more and export buttons
+    seeMoreButton.addEventListener('click', showMoreTags);
+    exportTagsButton.addEventListener('click', exportTagsToFile);
+};
+
+//Function to export tags to file
+function exportTagsToFile(){
+    if(allTags.length === 0){
+        showBurn('No tags availible to export!');
+        return;
     }
 
-}
+    //convert tags to download
+    const tagsText = allTags.map( ( { tag:{ en } } ) => en).join('\n');
+    const blob = new Blob([tagsText], { type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tags.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+//Function showBurn message
+
+const showToast = message =>{
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+    });
+    setTimeout(() => document.body.removeChild(toast), 500);
+};

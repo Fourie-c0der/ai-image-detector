@@ -71,6 +71,13 @@ button:hover{
     gap: 20px;
 }
 
+.colors-container h3{
+    display: block;
+}
+
+.colors-container h3:not(:first-child){
+    margin-top: 20px;
+}
 
 .tags-container{
     margin-top: 20px;
@@ -102,4 +109,27 @@ button:hover{
     max-width: 400px;
     text-align: center;
     border-radius: 10px;
+}
+
+.toast{
+    visibility: hidden;
+    max-width: 380px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 10px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 50px;
+    font-size: 17px;
+    transition: visibility 0s, opacity 0.5s linear;
+    opacity: 0;
+}
+
+.toast.show{
+    visibility: visible;
+    opacity: 1;
 }
