@@ -79,6 +79,28 @@ button:hover{
     margin-top: 20px;
 }
 
+.colors-container .results{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.colors-container .results .result-item{
+    display: flex;
+    align-items: center;
+    width: 49%;
+    background-color: #262626;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.colors-container .results .result-item:hover{
+    background-color: #07090e;
+    
+}
+
 .tags-container{
     margin-top: 20px;
     background-color: #18181b;

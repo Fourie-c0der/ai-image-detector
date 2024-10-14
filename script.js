@@ -1,7 +1,7 @@
-// ste number of tegs per page
+// Set number of tags per page
 const tagsPerPage = 20;
 
-//event listener fo upload
+// Event listener for upload
 document.getElementById('uploadButton').addEventListener('click', async () => {
     const fileInput = document.getElementById('imageInput');
     const file = fileInput.files[0];
@@ -9,136 +9,106 @@ document.getElementById('uploadButton').addEventListener('click', async () => {
     const uploadModal = document.getElementById('uploadModal');
     const uploadProgress = document.getElementById('uploadProgress');
 
-    // if now message is selected show error
-    
+    // If no file is selected, show an error
     if (!file) {
         return showToast('Please select an image file');
-    };
+    }
 
-    //Preview the selected image
-
+    // Preview the selected image
     const reader = new FileReader();
     reader.onload = e => imagePreview.src = e.target.result;
     reader.readAsDataURL(file);
 
-    //API credentials from Imagga 
+    // API credentials from Imagga 
     const apiKey = 'acc_5ac30301bd8ac81';
     const apiSecret = 'fb006dc6a7109dcd040a727659cb5d75';
-    const authHeader = 'Basic '+ btoa(`${apiKey}:${apiSecret}`);
+    const authHeader = 'Basic ' + btoa(`${apiKey}:${apiSecret}`);
 
-    //Prepare data for upload
+    // Prepare data for upload
     const formData = new FormData();
     formData.append('image', file);
 
-    try{
-        //Show upload modal and reset progress bar
+    try {
+        // Show upload modal and reset progress bar
         uploadModal.style.display = 'block';
         uploadProgress.style.width = '0%';
 
-        //Upload image to Imagga
+        // Upload image to Imagga
         const uploadResponse = await fetch('https://api.imagga.com/v2/uploads', {
             method: 'POST',
-            headers: {'Authorization': authHeader},
+            headers: { 'Authorization': authHeader },
             body: formData
         });
 
         if (!uploadResponse.ok) {
-            throw new Error('Upload failed')
+            throw new Error('Upload failed');
         }
 
-        //Track progress
-        const contentLength =+ uploadResponse.headers.get('Content-Length');
-        const reader = uploadResponse.body.getReader();
-        let receivedLength = 0;
-        let chuncks = [];
+        // Decode and parse upload response
+        const uploadData = await uploadResponse.json();
+        const uploadId = uploadData.result.upload_id;
 
-        //Read responce stream and update progress
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chuncks.push(value);
-            receivedLength += value.length;
-            uploadProgress.style.width = `${(receivedLength/contentLength)*100}%`
-        }
-
-        //decode and parse upload responce
-        const responceArray = new Uint8Array(receivedLength);
-        let position = 0;
-        for (const chunck of chuncks) {
-            responceArray.set(chunck, position);
-            position += chunck.length;
-        }
-
-        const text = new TextDecoder('utf-8').decode(responceArray);
-        const {result: { upload_id}} = JSON.parse(text);
-
-        //Get colors and tags from Imagga
+        // Get colors and tags from Imagga
         const [colorResult, tagsResult] = await Promise.all([
-            fetch(`https://api.imagga.com/v2/colors?image_upload_id=${upload_id}`, {headers: { 'Authorization': authHeader}}).then(res => res.json()),
-            fetch(`https://api.imagga.com/v2/tags?image_upload_id=${upload_id}`, {headers: { 'Authorization': authHeader}}).then(res => res.json()),
+            fetch(`https://api.imagga.com/v2/colors?image_upload_id=${uploadId}`, { headers: { 'Authorization': authHeader } }).then(res => res.json()),
+            fetch(`https://api.imagga.com/v2/tags?image_upload_id=${uploadId}`, { headers: { 'Authorization': authHeader } }).then(res => res.json()),
         ]);
 
-        //Display results
-        displayColors(colorResult.result.color);
-        displayTags(tagsResult.result.tag);
+        // Display results
+        displayColors(colorResult.result.colors);
+        displayTags(tagsResult.result.tags);
 
-    }catch(error){
+    } catch (error) {
         console.error('Error', error);
-        showToast('An error has occured while processing the image!');
-    }finally{
-       uploadModal.style.display = 'none'; 
+        showToast('An error has occurred while processing the image!');
+    } finally {
+        uploadModal.style.display = 'none';
     }
 });
 
-
-//Function to display color results
-
-const displayColors = colors =>{
+// Function to display color results
+const displayColors = (colors) => {
     const colorsContainer = document.querySelector('.colors-container');
     colorsContainer.innerHTML = ''; // Clear
 
-    //If now colors are found show an error
-    if(![colors.background_colors, colors.foreground_colors, colors.image_colors].some(arr => arr.length)) {
-        
+    // If no colors are found, show an error
+    if (!colors || (!colors.background_colors.length && !colors.foreground_colors.length && !colors.image_colors.length)) {
         colorsContainer.innerHTML = '<p class="error">Nothing to show</p>';
         return;
     }
 
-    //Genetrate HTML sections for different color types
-    const genetrateColorSection = (title, colorData) =>{
-        return `
-
-            <h3>${title}</h3>
-            <div class="results">
-                ${colorData.map(({html_code, closest_palete_color, percent }) => 
-                `
-                    <div class="result-item" data-color="${html_code}">
-                       <div>
-                            <div class="color-box" style="background-color:${html_code}" title="Color code: ${html_code}"></div> 
-                            <p>${html_code}<span> - ${closest_palete_color}</span></p>
-                        </div>
-                        <div class="progress-bar">
-                            <span>${percent.toFixed(2)}%</span>
-                            <div class="progress" style="width: ${percent}%"></div>
-                        </div>
+    // Generate HTML sections for different color types
+    const generateColorSection = (title, colorData) => `
+        <h3>${title}</h3>
+        <div class="results">
+            ${colorData.map(({ html_code, closest_palette_color, percent }) => `
+                <div class="result-item" data-color="${html_code}">
+                    <div>
+                        <div class="color-box" style="background-color:${html_code}" title="Color code: ${html_code}"></div>
+                        <p>${html_code}<span> - ${closest_palette_color}</span></p>
                     </div>
-                `).join('')}
-            </div>
-        `;
-    };
+                    <div class="progress-bar">
+                        <span>${percent.toFixed(2)}%</span>
+                        <div class="progress" style="width: ${percent}%"></div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 
-    //Append Section to the container
-    colorsContainer.innerHTML += genetrateColorSection('Background Colors', colors.background_colors);
-    colorsContainer.innerHTML += genetrateColorSection('Foreground Colors', colors.foreground_colors);
-    colorsContainer.innerHTML += genetrateColorSection('Image Colors', colors.image_colors);
+    // Append sections to the container
+    colorsContainer.innerHTML += generateColorSection('Background Colors', colors.background_colors);
+    colorsContainer.innerHTML += generateColorSection('Foreground Colors', colors.foreground_colors);
+    colorsContainer.innerHTML += generateColorSection('Image Colors', colors.image_colors);
 
-    document.querySelectorAll('.colors-container .result-item').forEach(item =>{
-        item.addEventListener('click', ()=>{
+    document.querySelectorAll('.colors-container .result-item').forEach(item => {
+        item.addEventListener('click', () => {
             const colorCode = item.getAttribute('data-color');
-            navigator.clipboard.writeText(colorCode).then(() => showToast(`Copied: ${colorCode}`)).catch(() => showToast('Failed to copy'));
+            navigator.clipboard.writeText(colorCode)
+                .then(() => showToast(`Copied: ${colorCode}`))
+                .catch(() => showToast('Failed to copy'));
         });
     });
-
 };
 
 //Function to display tags
